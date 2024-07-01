@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
 import SimplePeer from 'simple-peer';
 
@@ -6,6 +6,7 @@ const MasterApp = () => {
   const [peers, setPeers] = useState([]);
   const [searching, setSearching] = useState(false);
   const [socket, setSocket] = useState(null);
+  const masterVideoRef = useRef(null); 
 
   useEffect(() => {
     if (socket) {
@@ -32,6 +33,11 @@ const MasterApp = () => {
         });
       });
 
+      socket.on('shareScreen', (stream) => {
+        console.log('Compartilhamento de tela recebido do aluno:', stream);
+        setPeers((prevPeers) => [...prevPeers, { stream }]);
+      });
+
       return () => {
         socket.disconnect();
         setPeers([]);
@@ -49,7 +55,7 @@ const MasterApp = () => {
     } else {
       console.log('Iniciando busca de pares na rede...');
       const newSocket = io('http://192.168.1.46:8000');
-      newSocket.emit('identify', { type: 'master' }); // Identifica-se como master
+      newSocket.emit('identify', { type: 'master' }); 
       newSocket.emit('search-peers');
       setSocket(newSocket);
     }
@@ -63,6 +69,15 @@ const MasterApp = () => {
         {searching ? 'Interromper busca' : 'Procurar máquinas na rede'}
       </button>
       <div>
+        {/* Renderizar vídeo do master */}
+        <video
+          autoPlay
+          playsInline
+          ref={masterVideoRef}
+        />
+      </div>
+      <div>
+        {/* Renderizar vídeos dos alunos */}
         {peers.map((peerObj, index) => (
           <div key={index}>
             <video
