@@ -6,7 +6,8 @@ const MasterApp = () => {
   const [peers, setPeers] = useState([]);
   const [searching, setSearching] = useState(false);
   const [socket, setSocket] = useState(null);
-  const masterVideoRef = useRef(null); 
+  const masterVideoRef = useRef(null);
+  const [isReceivingScreen, setIsReceivingScreen] = useState(false); 
 
   useEffect(() => {
     if (socket) {
@@ -36,6 +37,7 @@ const MasterApp = () => {
       socket.on('shareScreen', (stream) => {
         console.log('Compartilhamento de tela recebido do aluno:', stream);
         setPeers((prevPeers) => [...prevPeers, { stream }]);
+        setIsReceivingScreen(true); // Atualiza o estado para indicar que está recebendo tela
       });
 
       return () => {
@@ -55,12 +57,18 @@ const MasterApp = () => {
     } else {
       console.log('Iniciando busca de pares na rede...');
       const newSocket = io('http://192.168.1.46:8000');
-      newSocket.emit('identify', { type: 'master' }); 
+      newSocket.emit('identify', { type: 'master' });
       newSocket.emit('search-peers');
       setSocket(newSocket);
     }
     setSearching((prevSearching) => !prevSearching);
   };
+
+  useEffect(() => {
+    return () => {
+      // Limpar efeitos quando o componente é desmontado
+    };
+  }, []);
 
   return (
     <div>
@@ -83,7 +91,7 @@ const MasterApp = () => {
             <video
               autoPlay
               playsInline
-              ref={videoElement => {
+              ref={(videoElement) => {
                 if (videoElement && peerObj && peerObj.stream) {
                   videoElement.srcObject = peerObj.stream;
                 } else {

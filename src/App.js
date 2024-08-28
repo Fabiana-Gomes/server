@@ -12,7 +12,7 @@ const App = () => {
         <MasterApp />
       </main>
       <footer>
-        <p>Desenvolvido com React e WebRTC</p>
+        <p>let's bora</p>
       </footer>
     </div>
   );

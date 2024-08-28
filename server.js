@@ -55,6 +55,10 @@ io.on('connection', (socket) => {
       console.log('Aluno conectado:', socket.id);
     }
   });
+  
+  socket.on('studentMessage', (data) => {
+    console.log(`Mensagem recebida do aluno ${socket.id}:`, data.message);
+  });
 
   socket.on('disconnect', () => {
     if (socket.id === masterSocketId) {
