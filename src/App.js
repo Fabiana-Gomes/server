@@ -8,7 +8,6 @@ const App = () => {
         <h1>WebRTC Screen Sharing</h1>
       </header>
       <main>
-        {/* Renderiza o componente MasterApp, que controla a funcionalidade de "master" */}
         <MasterApp />
       </main>
       <footer>

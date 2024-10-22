@@ -21,8 +21,6 @@ const MasterApp = () => {
           remoteVideo.autoplay = true;
           remoteVideo.muted = true;
           document.body.appendChild(remoteVideo);
-
-          // Limpeza
           remoteVideo.addEventListener('ended', () => {
             URL.revokeObjectURL(videoURL);
           });
@@ -42,14 +40,11 @@ const MasterApp = () => {
     const splitIndex = dataURI.indexOf(',');
     const byteString = atob(dataURI.substring(splitIndex + 1));
     const mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
-
     const arrayBuffer = new ArrayBuffer(byteString.length);
     const uint8Array = new Uint8Array(arrayBuffer);
-
     for (let i = 0; i < byteString.length; i++) {
       uint8Array[i] = byteString.charCodeAt(i);
     }
-
     return new Blob([uint8Array], { type: mimeString });
   };
 
@@ -77,7 +72,6 @@ const MasterApp = () => {
         {searching ? 'Interromper busca' : 'Procurar máquinas na rede'}
       </button>
       <div>
-        {/* Renderizar vídeos dos alunos */}
         {peers.map((peerObj, index) => (
           <div key={index}>
             <video

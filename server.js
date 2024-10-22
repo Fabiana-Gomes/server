@@ -4,6 +4,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const SimplePeer = require('simple-peer');
+const wrtc = require('wrtc');
 
 //config do ambiente do server
 const app = express();
@@ -20,6 +21,7 @@ const io = new Server(server, {
 const PORT = process.env.PORT || 8000;
 let masterReady = false;
 let masterSocketId = null;
+let connectedStudents = new Set(); 
 
 // Configurar CORS (belzebu)
 app.use((req, res, next) => {
@@ -54,7 +56,10 @@ io.on('connection', (socket) => {
       console.log('Master conectado:', socket.id);
       socket.emit('search-peers'); 
     } else if (data.type === 'student') {
-      console.log('Aluno conectado:', socket.id);
+      if (!connectedStudents.has(socket.id)) {
+        console.log('Novo aluno conectado:', socket.id);
+        connectedStudents.add(socket.id); // Adicionar aluno à lista
+      }
     }
   });
   
@@ -67,8 +72,9 @@ io.on('connection', (socket) => {
       console.log('Master desconectado');
       masterReady = false;
       masterSocketId = null;
-    } else {
+    } else if (connectedStudents.has(socket.id)) {
       console.log('Aluno desconectado:', socket.id);
+      connectedStudents.delete(socket.id); // Remover aluno desconectado
     }
   });
 
@@ -83,13 +89,16 @@ io.on('connection', (socket) => {
   //recebimento de uma oferta do aluno
   socket.on('offer', (data) => {
     console.log(`Oferta recebida do aluno ${socket.id}:`, data);
-
     socket.on('shareScreen', (data) => {
       console.log('Recebido no servidor:', data);
     });
 
         // config conexão peer-to-peer
-        const peer = new SimplePeer({ initiator: false, trickle: false });
+        const peer = new SimplePeer({ 
+          wrtc, 
+          initiator: false, 
+          trickle: false 
+        });
 
         // Emitir resposta 'answer' após receber o sinal
         peer.on('signal', (signal) => {
