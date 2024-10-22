@@ -3,6 +3,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+const SimplePeer = require('simple-peer');
 
 //config do ambiente do server
 const app = express();
@@ -43,6 +44,7 @@ server.listen(PORT, '0.0.0.0', () => {
 
 // Lógica do Socket.IO e logs de conexões
 io.on('connection', (socket) => {
+  // Identificar o tipo de cliente (master ou student)
   socket.on('identify', (data) => {
     if (data.type === 'master') {
       if (!masterReady) {
@@ -72,19 +74,9 @@ io.on('connection', (socket) => {
 
   // Receber o compartilhamento de tela do aluno e transmitir ao master
   socket.on('shareScreen', (data) => {
+    console.log('Compartilhamento de tela recebido:', data);
     if (masterSocketId) {
-      io.to(masterSocketId).emit('shareScreen', data); 
-
-      // Comportamento da stream no master
-      const remoteVideo = document.createElement('video');
-      remoteVideo.srcObject = data.screenStream; 
-      remoteVideo.autoplay = true;
-      remoteVideo.muted = true;
-      document.body.appendChild(remoteVideo);
-
-      socket.on('disconnect', () => {
-        document.body.removeChild(remoteVideo);
-      });
+      io.to(masterSocketId).emit('shareScreen', data);
     }
   });
 
@@ -92,9 +84,14 @@ io.on('connection', (socket) => {
   socket.on('offer', (data) => {
     console.log(`Oferta recebida do aluno ${socket.id}:`, data);
 
+    socket.on('shareScreen', (data) => {
+      console.log('Recebido no servidor:', data);
+    });
 
         // config conexão peer-to-peer
         const peer = new SimplePeer({ initiator: false, trickle: false });
+
+        // Emitir resposta 'answer' após receber o sinal
         peer.on('signal', (signal) => {
           socket.emit('answer', { signal });
         });
@@ -102,10 +99,13 @@ io.on('connection', (socket) => {
         peer.on('connect', () => {
           console.log('Conexão peer-to-peer estabelecida com o aluno:', socket.id);
         });
+    
+        // Tratamento de erros na conexão peer-to-peer
         peer.on('error', (err) => {
           console.error('Erro na conexão com o aluno:', err);
         });
-        
+    
+        // Lógica para lidar com os dados recebidos do aluno
         peer.on('data', (data) => {
           console.log(`Dados recebidos do aluno ${socket.id}:`, data);
         

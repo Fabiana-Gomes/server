@@ -1,43 +1,34 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import io from 'socket.io-client';
-import SimplePeer from 'simple-peer';
 
 const MasterApp = () => {
   const [peers, setPeers] = useState([]);
   const [searching, setSearching] = useState(false);
   const [socket, setSocket] = useState(null);
-  const masterVideoRef = useRef(null);
-  const [isReceivingScreen, setIsReceivingScreen] = useState(false); 
-
+  
   useEffect(() => {
     if (socket) {
-      socket.on('new-peer', () => {
-        console.log('Novo peer encontrado');
-        const peer = new SimplePeer({ initiator: true, trickle: false });
+      socket.on('shareScreen', (data) => {
+        console.log('Compartilhamento de tela recebido do aluno:', data);
 
-        peer.on('signal', (data) => {
-          console.log('Sinal enviado para peer');
-          socket.emit('offer', { signal: data });
-        });
+        if (data && data.base64data) {
+          const base64String = data.base64data;
+          const videoBlob = dataURItoBlob(base64String);
+          const videoURL = URL.createObjectURL(videoBlob);
 
-        peer.on('stream', (stream) => {
-          console.log('Stream recebido de um novo peer:', stream);
-          setPeers((prevPeers) => [...prevPeers, { peer, stream }]);
-        });
+          const remoteVideo = document.createElement('video');
+          remoteVideo.src = videoURL;
+          remoteVideo.autoplay = true;
+          remoteVideo.muted = true;
+          document.body.appendChild(remoteVideo);
 
-        peer.on('error', (err) => {
-          console.error('Erro na conexão com o peer:', err);
-        });
-
-        socket.on('answer', (data) => {
-          peer.signal(data.signal);
-        });
-      });
-
-      socket.on('shareScreen', (stream) => {
-        console.log('Compartilhamento de tela recebido do aluno:', stream);
-        setPeers((prevPeers) => [...prevPeers, { stream }]);
-        setIsReceivingScreen(true); // Atualiza o estado para indicar que está recebendo tela
+          // Limpeza
+          remoteVideo.addEventListener('ended', () => {
+            URL.revokeObjectURL(videoURL);
+          });
+        } else {
+          console.error('Dados de compartilhamento de tela inválidos:', data);
+        }
       });
 
       return () => {
@@ -46,6 +37,21 @@ const MasterApp = () => {
       };
     }
   }, [socket]);
+
+  const dataURItoBlob = (dataURI) => {
+    const splitIndex = dataURI.indexOf(',');
+    const byteString = atob(dataURI.substring(splitIndex + 1));
+    const mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+
+    const arrayBuffer = new ArrayBuffer(byteString.length);
+    const uint8Array = new Uint8Array(arrayBuffer);
+
+    for (let i = 0; i < byteString.length; i++) {
+      uint8Array[i] = byteString.charCodeAt(i);
+    }
+
+    return new Blob([uint8Array], { type: mimeString });
+  };
 
   const toggleSearch = () => {
     if (searching) {
@@ -64,26 +70,12 @@ const MasterApp = () => {
     setSearching((prevSearching) => !prevSearching);
   };
 
-  useEffect(() => {
-    return () => {
-      // Limpar efeitos quando o componente é desmontado
-    };
-  }, []);
-
   return (
     <div>
       <h1>Master App - Buscar Compartilhamento</h1>
       <button onClick={toggleSearch}>
         {searching ? 'Interromper busca' : 'Procurar máquinas na rede'}
       </button>
-      <div>
-        {/* Renderizar vídeo do master */}
-        <video
-          autoPlay
-          playsInline
-          ref={masterVideoRef}
-        />
-      </div>
       <div>
         {/* Renderizar vídeos dos alunos */}
         {peers.map((peerObj, index) => (
